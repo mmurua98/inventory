@@ -2,47 +2,78 @@
 
 ## Project overview
 
-This is a full rebuild of a legacy Laravel 8 internal inventory control
-and purchase order management system.
+This repository contains a full rebuild of a legacy Laravel 8 internal
+inventory control and purchase order management system.
 
 The legacy system had:
 - critical bugs
 - schema inconsistencies
-- business logic inside Blade/jQuery
+- business logic embedded in Blade / jQuery
 - unreliable inventory calculations
+- inconsistent purchase order numbering
 
-This version is rebuilt from scratch with a clean architecture.
+This version is rebuilt from scratch using Laravel 11 conventions and a
+clean architecture.
+
+---
+
+## Repository structure
+
+- The Laravel application lives inside `/app`
+- Repository root is **not** the Laravel root
+- Always run Composer, Artisan, and frontend asset commands from `/app`
+
+Examples:
+- `cd app && composer install`
+- `cd app && php artisan migrate`
+- `cd app && composer run dev`
 
 ---
 
 ## Read first (mandatory)
 
-Before starting any task, always read:
+Before starting any implementation task, always read:
 
-- `BLUEPRINT.md` — system design, normalized schema, domain model, PO logic
+- `BLUEPRINT.md` — target system design, domain model, schema, business rules
 - `REBUILD_PLAN.md` — implementation phases and module order
-- `RISK_MATRIX.md` — known failure patterns to avoid
+- `RISK_MATRIX.md` — legacy risks and anti-patterns to avoid
 
 ---
 
 ## Source of truth
 
-- `BLUEPRINT.md` = **system design (must be followed strictly)**
-- `REBUILD_PLAN.md` = **implementation sequence**
-- `RISK_MATRIX.md` = **reliability constraints**
+- `BLUEPRINT.md` = system design (**must be followed strictly**)
+- `REBUILD_PLAN.md` = implementation sequence
+- `RISK_MATRIX.md` = reliability constraints
 
-Do not override these documents unless explicitly instructed.
+Do not redesign the system unless explicitly instructed.
 
 ---
 
 ## Target stack
 
-- PHP 8.3 / Laravel 11
+- PHP 8.2
+- Laravel 11
 - MySQL 8
-- Blade + Bootstrap 5 (AdminLTE)
-- Alpine.js (light UI interactions only)
-- Spatie Laravel-Permission (RBAC)
-- DomPDF or mPDF (PDF generation)
+- Blade (server-rendered views)
+- Alpine.js only for light progressive enhancement when explicitly needed
+- Laravel default project structure and conventions
+- Additional packages only when required by the current phase
+
+Notes:
+- Do not assume SQLite
+- Do not assume a starter kit unless explicitly requested
+- Prefer Laravel defaults before adding external abstractions
+
+---
+
+## Laravel 11 implementation principles
+
+- Follow Laravel 11 default structure and conventions
+- Keep configuration minimal unless a real project requirement demands otherwise
+- Prefer first-party Laravel features before introducing third-party packages
+- Use `.env` for environment-specific configuration
+- Treat MySQL as the intended application database for this project
 
 ---
 
@@ -51,66 +82,52 @@ Do not override these documents unless explicitly instructed.
 ### Controllers
 - Controllers must be thin
 - Controllers must not contain business logic
-- Controllers must not implement domain rules
-- Controllers must delegate to service classes
-- Prefer resource controllers
+- Controllers must delegate application work to services / actions
+- Prefer resource controllers when appropriate
 
 ### Services
-- All business logic must live in `app/Services/`
-- Controllers must not directly perform business operations
-- All write operations must go through services
-- Services must receive typed parameters (not raw Request)
+- Business logic must live in dedicated service classes under `app/Services/`
+- Controllers must not directly orchestrate multi-step business operations
+- Services must receive validated / typed data, not raw Request objects
 
-Core services:
-- PurchaseOrderService
-- InventoryService
-- StockService
-- DocumentSequenceService
+Planned core services include:
+- `PurchaseOrderService`
+- `InventoryService`
+- `StockService`
+- `DocumentSequenceService`
 
----
+### Validation
+- Every write endpoint must use a dedicated FormRequest
+- Never use `$request->all()` or `$request->only()` as the primary input boundary
+- Validation messages shown to end users must be in Spanish
 
-## Validation
-
-- Every write endpoint must use a FormRequest
-- Never use `$request->all()` or `$request->only()`
-- Validation messages must be in Spanish
-
----
-
-## Transactions
-
+### Transactions
 - Any multi-table write must use `DB::transaction()`
 
 Mandatory for:
 - purchase order creation
-- status transitions
+- purchase order approval / status transitions
 - goods receipt
 - inventory movements
 - stock adjustments
 
----
-
-## Models
-
-- Always define `$fillable`
+### Models
+- Always define `$fillable` explicitly
 - Never use `$guarded = []`
-- Define relationships with return types
-- Use soft deletes for:
-  - products
-  - suppliers
-  - purchase_orders
+- Define relationships clearly
+- Use soft deletes only where defined in `BLUEPRINT.md`
 
 ---
 
 ## Database conventions
 
-- Use English for table/column names
+- Use English for table and column names
 - Use `snake_case`
 - Primary keys: `id` (bigint)
 - Foreign keys: `{entity}_id`
-- Always include timestamps
-- Soft deletes where required
-- Boolean fields: `is_*`
+- Include `created_at` and `updated_at`
+- Use soft deletes only when explicitly required
+- Boolean fields should use the `is_*` convention
 - Amounts: `decimal(14,2)`
 - Quantities: `decimal(12,3)`
 
@@ -118,44 +135,41 @@ Mandatory for:
 
 ## Inventory integrity rules
 
-- Inventory is movement-based (ledger system)
-- Stock must never be edited directly
-- All changes must come from inventory movements
-- Prevent negative stock at transaction time (hard validation)
-- Inventory balances must be derivable from movements
-- No direct updates to `inventory_balances` outside services
+- Inventory is movement-based (ledger model)
+- Stock must never be edited directly through arbitrary writes
+- All stock changes must come from controlled inventory movements
+- Negative stock must be prevented at transaction time unless an explicit business rule says otherwise
+- `inventory_balances` must remain derivable / reconcilable from movements
+- No direct updates to balances outside controlled services
 
 ---
 
 ## Critical bugs to never reproduce
 
-1. Never use assignment `=` instead of comparison `==` / `===`
-2. Never assign collections (`->get()`) to scalar fields — use `->value()`
-3. Never enforce mutually exclusive foreign keys as both required
-4. Never mismatch column names (typos between migration and code)
+- Never use assignment `=` where comparison `==` / `===` is intended
+- Never assign a collection or query result object to a scalar field
+- Never require mutually exclusive foreign keys at the same time
+- Never mismatch migration column names and application code names
+- Never bypass transaction boundaries for inventory or PO workflows
 
 ---
 
 ## Business rules
 
 ### Purchase order lifecycle
+`DRAFT → APPROVED → PARTIAL_RECEIVED → RECEIVED`  
+`      ↘ CANCELLED`
 
-DRAFT → APPROVED → PARTIAL_RECEIVED → RECEIVED  
-                 ↘ CANCELLED
-
-- Only DRAFT orders are editable
-- Status transitions must be validated in services
-
----
+- Only DRAFT purchase orders are editable
+- Status transitions must be validated in services, not controllers
 
 ### PO numbering
-
-- Format: `PO-{YYYY}-{SUPPLIERCODE}-{SEQ6}`
-- Sequence is per supplier per year
-- Resets every January 1
-- Assigned at approval
-- Immutable after assignment
-- Must be generated inside a transaction with row-level locking
+- Format: `PO-{YYYY}-{SUPPLIER_CODE}-{SEQ6}`
+- Sequence is per supplier, per year
+- Sequence resets every January 1
+- Number is assigned at approval
+- Number is immutable once assigned
+- Generation must occur inside a transaction using row-level locking
 
 ---
 
@@ -164,33 +178,32 @@ DRAFT → APPROVED → PARTIAL_RECEIVED → RECEIVED
 - Work only on the requested module or phase
 - Do not generate UI unless explicitly requested
 - Do not implement features outside the current phase
-- Do not redesign the system unless explicitly instructed
-- Do not add extra fields or tables not defined in BLUEPRINT.md
+- Do not add extra business fields or tables not defined in `BLUEPRINT.md`
+- Do not introduce packages unless justified by the current phase
 
 ---
 
 ## Assumptions
 
 - Do not assume missing business rules
-- Do not invent logic not defined in BLUEPRINT.md
-- Ask for clarification if something is unclear
+- Do not invent logic outside `BLUEPRINT.md`
+- If something is ambiguous, ask for clarification before implementing
 
 ---
 
-## UI guidelines
+## UI rules
 
 - UI is secondary to business logic
-- Do not prioritize styling early
-- Use simple Blade views for functional validation
-- UI refinement happens after core logic is stable
+- Prefer simple Blade views first
+- Do not prioritize visual polish in early phases
+- Avoid admin templates unless explicitly requested
+- Use Laravel / Blade conventions before adding UI complexity
 
 ---
 
 ## Development approach
 
 - Implement one module at a time
-- Follow REBUILD_PLAN.md strictly
-- Validate each module before moving to the next
-- Favor correctness over speed
-
----
+- Follow `REBUILD_PLAN.md` strictly
+- Validate each phase before moving forward
+- Favor correctness, consistency, and maintainability over speed
