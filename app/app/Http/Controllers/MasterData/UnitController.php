@@ -6,38 +6,59 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Unit\StoreUnitRequest;
 use App\Http\Requests\Unit\UpdateUnitRequest;
 use App\Models\Unit;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class UnitController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(): View
     {
-        return response()->json(Unit::query()->latest('id')->paginate());
+        return view('master-data.units.index', [
+            'units' => Unit::query()->latest('id')->paginate(15),
+        ]);
     }
 
-    public function store(StoreUnitRequest $request): JsonResponse
+    public function create(): View
     {
-        $unit = Unit::query()->create($request->validated());
-
-        return response()->json($unit, 201);
+        return view('master-data.units.create');
     }
 
-    public function show(Unit $unit): JsonResponse
+    public function store(StoreUnitRequest $request): RedirectResponse
     {
-        return response()->json($unit);
+        Unit::query()->create($request->validated());
+
+        return redirect()
+            ->route('master-data.units.index')
+            ->with('success', 'Unidad creada correctamente.');
     }
 
-    public function update(UpdateUnitRequest $request, Unit $unit): JsonResponse
+    public function show(Unit $unit): RedirectResponse
+    {
+        return redirect()->route('master-data.units.edit', $unit);
+    }
+
+    public function edit(Unit $unit): View
+    {
+        return view('master-data.units.edit', [
+            'unit' => $unit,
+        ]);
+    }
+
+    public function update(UpdateUnitRequest $request, Unit $unit): RedirectResponse
     {
         $unit->update($request->validated());
 
-        return response()->json($unit->fresh());
+        return redirect()
+            ->route('master-data.units.index')
+            ->with('success', 'Unidad actualizada correctamente.');
     }
 
-    public function destroy(Unit $unit): JsonResponse
+    public function destroy(Unit $unit): RedirectResponse
     {
         $unit->delete();
 
-        return response()->json([], 204);
+        return redirect()
+            ->route('master-data.units.index')
+            ->with('success', 'Unidad eliminada correctamente.');
     }
 }

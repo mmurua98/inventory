@@ -6,38 +6,69 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
 use App\Models\Product;
-use Illuminate\Http\JsonResponse;
+use App\Models\ProductCategory;
+use App\Models\TaxRate;
+use App\Models\Unit;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(): View
     {
-        return response()->json(Product::query()->latest('id')->paginate());
+        return view('master-data.products.index', [
+            'products' => Product::query()->with(['category', 'unit', 'taxRate'])->latest('id')->paginate(15),
+        ]);
     }
 
-    public function store(StoreProductRequest $request): JsonResponse
+    public function create(): View
     {
-        $product = Product::query()->create($request->validated());
-
-        return response()->json($product, 201);
+        return view('master-data.products.create', [
+            'categories' => ProductCategory::query()->where('is_active', true)->orderBy('name')->get(),
+            'units' => Unit::query()->orderBy('name')->get(),
+            'taxRates' => TaxRate::query()->where('is_active', true)->orderBy('name')->get(),
+        ]);
     }
 
-    public function show(Product $product): JsonResponse
+    public function store(StoreProductRequest $request): RedirectResponse
     {
-        return response()->json($product);
+        Product::query()->create($request->validated());
+
+        return redirect()
+            ->route('master-data.products.index')
+            ->with('success', 'Producto creado correctamente.');
     }
 
-    public function update(UpdateProductRequest $request, Product $product): JsonResponse
+    public function show(Product $product): RedirectResponse
+    {
+        return redirect()->route('master-data.products.edit', $product);
+    }
+
+    public function edit(Product $product): View
+    {
+        return view('master-data.products.edit', [
+            'product' => $product,
+            'categories' => ProductCategory::query()->where('is_active', true)->orderBy('name')->get(),
+            'units' => Unit::query()->orderBy('name')->get(),
+            'taxRates' => TaxRate::query()->where('is_active', true)->orderBy('name')->get(),
+        ]);
+    }
+
+    public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
         $product->update($request->validated());
 
-        return response()->json($product->fresh());
+        return redirect()
+            ->route('master-data.products.index')
+            ->with('success', 'Producto actualizado correctamente.');
     }
 
-    public function destroy(Product $product): JsonResponse
+    public function destroy(Product $product): RedirectResponse
     {
         $product->delete();
 
-        return response()->json([], 204);
+        return redirect()
+            ->route('master-data.products.index')
+            ->with('success', 'Producto eliminado correctamente.');
     }
 }

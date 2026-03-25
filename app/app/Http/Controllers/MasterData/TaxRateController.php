@@ -6,38 +6,59 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\TaxRate\StoreTaxRateRequest;
 use App\Http\Requests\TaxRate\UpdateTaxRateRequest;
 use App\Models\TaxRate;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class TaxRateController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(): View
     {
-        return response()->json(TaxRate::query()->latest('id')->paginate());
+        return view('master-data.tax-rates.index', [
+            'taxRates' => TaxRate::query()->latest('id')->paginate(15),
+        ]);
     }
 
-    public function store(StoreTaxRateRequest $request): JsonResponse
+    public function create(): View
     {
-        $taxRate = TaxRate::query()->create($request->validated());
-
-        return response()->json($taxRate, 201);
+        return view('master-data.tax-rates.create');
     }
 
-    public function show(TaxRate $taxRate): JsonResponse
+    public function store(StoreTaxRateRequest $request): RedirectResponse
     {
-        return response()->json($taxRate);
+        TaxRate::query()->create($request->validated());
+
+        return redirect()
+            ->route('master-data.tax-rates.index')
+            ->with('success', 'Tasa de impuesto creada correctamente.');
     }
 
-    public function update(UpdateTaxRateRequest $request, TaxRate $taxRate): JsonResponse
+    public function show(TaxRate $taxRate): RedirectResponse
+    {
+        return redirect()->route('master-data.tax-rates.edit', $taxRate);
+    }
+
+    public function edit(TaxRate $taxRate): View
+    {
+        return view('master-data.tax-rates.edit', [
+            'taxRate' => $taxRate,
+        ]);
+    }
+
+    public function update(UpdateTaxRateRequest $request, TaxRate $taxRate): RedirectResponse
     {
         $taxRate->update($request->validated());
 
-        return response()->json($taxRate->fresh());
+        return redirect()
+            ->route('master-data.tax-rates.index')
+            ->with('success', 'Tasa de impuesto actualizada correctamente.');
     }
 
-    public function destroy(TaxRate $taxRate): JsonResponse
+    public function destroy(TaxRate $taxRate): RedirectResponse
     {
         $taxRate->delete();
 
-        return response()->json([], 204);
+        return redirect()
+            ->route('master-data.tax-rates.index')
+            ->with('success', 'Tasa de impuesto eliminada correctamente.');
     }
 }

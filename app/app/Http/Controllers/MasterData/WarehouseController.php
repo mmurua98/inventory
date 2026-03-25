@@ -6,38 +6,59 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Warehouse\StoreWarehouseRequest;
 use App\Http\Requests\Warehouse\UpdateWarehouseRequest;
 use App\Models\Warehouse;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class WarehouseController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(): View
     {
-        return response()->json(Warehouse::query()->latest('id')->paginate());
+        return view('master-data.warehouses.index', [
+            'warehouses' => Warehouse::query()->latest('id')->paginate(15),
+        ]);
     }
 
-    public function store(StoreWarehouseRequest $request): JsonResponse
+    public function create(): View
     {
-        $warehouse = Warehouse::query()->create($request->validated());
-
-        return response()->json($warehouse, 201);
+        return view('master-data.warehouses.create');
     }
 
-    public function show(Warehouse $warehouse): JsonResponse
+    public function store(StoreWarehouseRequest $request): RedirectResponse
     {
-        return response()->json($warehouse);
+        Warehouse::query()->create($request->validated());
+
+        return redirect()
+            ->route('master-data.warehouses.index')
+            ->with('success', 'Almacén creado correctamente.');
     }
 
-    public function update(UpdateWarehouseRequest $request, Warehouse $warehouse): JsonResponse
+    public function show(Warehouse $warehouse): RedirectResponse
+    {
+        return redirect()->route('master-data.warehouses.edit', $warehouse);
+    }
+
+    public function edit(Warehouse $warehouse): View
+    {
+        return view('master-data.warehouses.edit', [
+            'warehouse' => $warehouse,
+        ]);
+    }
+
+    public function update(UpdateWarehouseRequest $request, Warehouse $warehouse): RedirectResponse
     {
         $warehouse->update($request->validated());
 
-        return response()->json($warehouse->fresh());
+        return redirect()
+            ->route('master-data.warehouses.index')
+            ->with('success', 'Almacén actualizado correctamente.');
     }
 
-    public function destroy(Warehouse $warehouse): JsonResponse
+    public function destroy(Warehouse $warehouse): RedirectResponse
     {
         $warehouse->delete();
 
-        return response()->json([], 204);
+        return redirect()
+            ->route('master-data.warehouses.index')
+            ->with('success', 'Almacén eliminado correctamente.');
     }
 }
