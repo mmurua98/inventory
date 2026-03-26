@@ -226,3 +226,35 @@ At a high level, it handles:
 - Prioritized backlog with critical bug fixes and parity requirements.
 - Approved target architecture and phased delivery plan.
 - Signed data migration and rollback strategy.
+
+---
+
+## 9) Implementation Status Update — Phase 1 (Master Data)
+
+### Status
+- **Phase 1 is implemented and validated** for the scoped master data module.
+
+### Completed scope
+- Core tables and relationships implemented:
+  - `product_categories`
+  - `units`
+  - `tax_rates`
+  - `suppliers`
+  - `products`
+  - `warehouses`
+- Eloquent models created with explicit `$fillable` and relationship mappings for the above entities.
+- CRUD application layer completed for Phase 1:
+  - Resource controllers
+  - Store/Update `FormRequest` validation with Spanish user-facing messages
+  - Web resource routes under `master-data`
+  - Minimal Blade + Bootstrap UI (`index`, `create`, `edit`) per entity.
+
+### Notable fixes applied during Phase 1 hardening
+- Fixed boolean form handling so `is_active` can be reliably set to `false` from UI (create/update).
+- Enforced `supplier_code` immutability on update (validation + update flow protections).
+- Prevented edit-form forced reassignment by preserving currently selected inactive related records in selector datasets.
+
+### Remaining minor follow-up items
+- Add automated Feature tests for CRUD flows and validation edge cases in master data.
+- Replace current `show -> edit` redirects with dedicated show pages (or remove `show` routes if not needed).
+- Add access control (RBAC/policies) once Phase 3 RBAC hardening is executed.
