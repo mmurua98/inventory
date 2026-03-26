@@ -18,7 +18,6 @@ return new class extends Migration
             $table->decimal('on_hand_qty', 12, 3)->default(0);
             $table->decimal('reserved_qty', 12, 3)->default(0);
             $table->decimal('available_qty', 12, 3)->default(0);
-            $table->decimal('avg_cost', 14, 4)->nullable();
             $table->timestamps();
 
             $table->unique(['warehouse_id', 'product_id']);

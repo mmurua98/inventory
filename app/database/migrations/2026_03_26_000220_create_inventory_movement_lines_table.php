@@ -16,10 +16,8 @@ return new class extends Migration
             $table->foreignId('inventory_movement_id')->constrained('inventory_movements');
             $table->unsignedInteger('line_no');
             $table->foreignId('product_id')->constrained('products');
-            $table->unsignedDecimal('qty', 12, 3);
+            $table->decimal('qty', 12, 3);
             $table->decimal('unit_cost', 14, 4)->nullable();
-            $table->string('lot_no')->nullable();
-            $table->dateTime('expires_at')->nullable();
             $table->timestamps();
 
             $table->unique(['inventory_movement_id', 'line_no']);
