@@ -48,9 +48,17 @@ class ProductController extends Controller
     {
         return view('master-data.products.edit', [
             'product' => $product,
-            'categories' => ProductCategory::query()->where('is_active', true)->orderBy('name')->get(),
+            'categories' => ProductCategory::query()
+                ->where('is_active', true)
+                ->orWhere('id', $product->category_id)
+                ->orderBy('name')
+                ->get(),
             'units' => Unit::query()->orderBy('name')->get(),
-            'taxRates' => TaxRate::query()->where('is_active', true)->orderBy('name')->get(),
+            'taxRates' => TaxRate::query()
+                ->where('is_active', true)
+                ->orWhere('id', $product->tax_rate_id)
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 

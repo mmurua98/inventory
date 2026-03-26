@@ -22,12 +22,7 @@ class UpdateSupplierRequest extends FormRequest
         $supplier = $this->route('supplier');
 
         return [
-            'supplier_code' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('suppliers', 'supplier_code')->ignore($supplier->id),
-            ],
+            'supplier_code' => ['required', 'string', Rule::in([$supplier->supplier_code])],
             'legal_name' => ['required', 'string', 'max:255'],
             'trade_name' => ['nullable', 'string', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:255'],
@@ -51,8 +46,7 @@ class UpdateSupplierRequest extends FormRequest
         return [
             'supplier_code.required' => 'El código del proveedor es obligatorio.',
             'supplier_code.string' => 'El código del proveedor debe ser un texto.',
-            'supplier_code.max' => 'El código del proveedor no debe exceder 255 caracteres.',
-            'supplier_code.unique' => 'El código del proveedor ya existe.',
+            'supplier_code.in' => 'El código del proveedor no se puede modificar.',
             'legal_name.required' => 'La razón social del proveedor es obligatoria.',
             'legal_name.string' => 'La razón social del proveedor debe ser un texto.',
             'legal_name.max' => 'La razón social del proveedor no debe exceder 255 caracteres.',

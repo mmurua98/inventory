@@ -44,13 +44,17 @@ class SupplierController extends Controller
     {
         return view('master-data.suppliers.edit', [
             'supplier' => $supplier,
-            'taxRates' => TaxRate::query()->where('is_active', true)->orderBy('name')->get(),
+            'taxRates' => TaxRate::query()
+                ->where('is_active', true)
+                ->orWhere('id', $supplier->default_tax_rate_id)
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
     public function update(UpdateSupplierRequest $request, Supplier $supplier): RedirectResponse
     {
-        $supplier->update($request->validated());
+        $supplier->update(collect($request->validated())->except('supplier_code')->all());
 
         return redirect()
             ->route('master-data.suppliers.index')
