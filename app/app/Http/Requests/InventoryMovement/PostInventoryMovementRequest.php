@@ -17,7 +17,6 @@ class PostInventoryMovementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'in:POSTED'],
             'notes' => ['nullable', 'string'],
         ];
     }
@@ -28,8 +27,6 @@ class PostInventoryMovementRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'status.required' => 'El estado es obligatorio para publicar el movimiento.',
-            'status.in' => 'El estado debe ser POSTED para publicar el movimiento.',
             'notes.string' => 'Las notas deben ser un texto.',
         ];
     }
